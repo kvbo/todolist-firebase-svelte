@@ -5,8 +5,8 @@
     export let task;
     export let id;
     export let done;
-    export let index
-
+    export let index;
+    export let todo;
 </script>
 <style>
 .task {
@@ -101,7 +101,7 @@ button {
 
 <div class='task' id="task-{id}">
     <label class="container" >
-        <input type="checkbox" bind:checked={done} on:change="{e => $tasks[index].done = done }" />
+        <input type="checkbox" bind:checked={done} on:change="{e => todo.tasks[index].done = done }" />
         <span class="checkmark"></span>
     </label>
     <p style="
@@ -110,6 +110,6 @@ button {
         font-size: 0.8rem;
         "
     >{task}</p>
-    <button on:click style="margin-left: auto;margin-right: 0 margin-top: auto; margin-bottom: auto"><CloseIcon /></button>
+    <button on:click class="hidden" style="margin-left: auto;margin-right: 0 margin-top: auto; margin-bottom: auto"><CloseIcon /></button>
 </div>
 

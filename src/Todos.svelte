@@ -1,20 +1,20 @@
 <script>    
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, query, getDocs } from "firebase/firestore";
+import { getFirestore, collection, query, getDocs, orderBy, doc, deleteDoc } from "firebase/firestore";
 import { firebaseConfig } from "./firebase"
-import Button from './components/Button.svelte'
-import { tasks } from './store'
-import Task from './components/Task.svelte'
-import { v4 } from 'uuid'
+
 import { getContext } from "svelte";
+import Todo from "./Todo.svelte";
+import App from "./App.svelte";
 
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const q = query(collection(db, "todos"))
+const q = query(collection(db, "todos"), orderBy('created', 'desc'))
 
 const { todos } = getContext('todos')
+
 
 if(!$todos.length){
   let temp = []
@@ -22,138 +22,109 @@ if(!$todos.length){
     $todos = [...$todos, { id: doc.id , ...doc.data()}]
   })).catch( error => console.log(error.message))
 }
-let value = ''
+
+const delete_todo = (e, id) => {
+  e.preventDefault()
+  const doc_to_be_deleted = doc(collection(db, "todos"), id)
+  deleteDoc(doc_to_be_deleted).then(_ => console.log(_)).catch(error => console.log(error))
+}
+
+
+let selected = {}
+
 </script>
 
 <style>
   .workspace{
     display: flex;
-    flex-direction: column;
+    flex-direction: rows;
     min-height: 100vh;
     max-height: 100vh;
     position: relative;
+    overflow: hidden;
   }
   .sidebar{
-    position: sticky;
-    background-color: rgb(63, 63, 63);
-    /* color: ; */
-    max-width: 15rem;
+    /* position: sticky; */
+    max-width: 18rem;
     min-height: 100vh;
     box-sizing: border-box;
-    padding: 0.5rem;
+    flex: 1;
+  }
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+  .todo {
+    border-radius: 4px;
+    padding: 0.5rem 0.5rem;
+    opacity: 0.8;
+    cursor: pointer;
+    width: full;
+  }
+  .todo:hover{
+    background-color: #888;
   }
 </style>
 
 <main class="workspace">
-  <div class="sidebar">
-    <h3>TODOS</h3>
-    {#each $todos as todo (todo)}
-      <div class="">{todo.title}</div>
-    {/each}
-  </div>
-  <div>
+  <div class="sidebar bg-gradient-to-b from-slate-700 to-slate-800 text-white select-none flex flex-col">
+    <div class="min-h-[10vh] flex px-8 place-items-center border-b">
+      <div class="">Todos</div>
+      <button 
+        on:click="{() => selected = {created: '', title: '', tasks: [] }}"
+        class="mr-0 ml-auto flex place-items-center hover:transform hover:scale-110 transition-transform">
+        <span class="material-icons">add</span>
+      </button>
+    </div>
 
-  </div>
-</main>
 
-<!-- <main>
-  <button on:click={() => console.log($todos)} />
-  <div class="parent">
-     <div class="fg">
-      <div style="display:flex; flex-direction:column;margin-bottom: 1rem;">
-      {#each $tasks as task, index (task)}
-        <Task 
-          task={task.task} 
-          id={task.id} 
-          done={task.done}
-          index={index}
-          on:click={() => {
-            tasks.update( prev => {
-              prev[index] = null;
-              prev = prev.filter( i => i != null )
-              return prev
-            })
-          }}
-        />
+    <div class="box-border px-2 py-2 overflow-y-auto text-sm border-b flex-1">
+      {#each $todos as todo (todo)}
+        <div class='flex place-items-center 
+            opacity-75  
+            border-box
+            { selected.id == todo.id && "text-[#0f0] opacity-100 bg-white bg-opacity-10 "}
+            hover:text-[#0f0]
+            cursor-pointer 
+            py-3 
+            px-6 
+            hover:opacity-100
+            hover:bg-opacity-10
+           hover:bg-white
+           h-[3rem]
+           group 
+           rounded-md' on:click="{() => selected = todo }">
+          <div class="flex-1">{todo.title}</div>
+          <button 
+            on:click="{e => delete_todo(e, todo.id)}"
+            class="mr-0 ml-auto hidden group-hover:flex place-items-center hover:transform hover:scale-110 transition-transform">
+          <span class="material-icons">
+            delete
+          </span>
+        </button>
+        </div>
       {/each}
-      </div>
-      <div style="        
-        display:flex;
-        flex-direction: column;
-        gap: 1rem;
-        margin-top: auto;
-        margin-bottom: 0;
-        ">
-          <input 
-            style='
-              width: 100%; 
-              padding: 1.3rem .5rem; 
-              box-sizing: border-box;
-              border: none;
-              background-color: #f8f8f8 ;
-              color: #777;
-              border-radius: 0.25rem;
-              font-weight: bold;
-              ' 
-            bind:value placeholder="add task" type='text' 
-          />
-          <div style="width: 100%; display: flex; justify-content: flex-end; gap: 1rem; align-items: center;">
-            <p>
-              Total tasks: {$tasks.length}
-            </p>
-            <p style="margin-left: 0; margin-right: auto;">
-              Completed tasks: {$tasks.filter( i => i.done === true ).length || 0 }
-            </p>
-            <Button 
-              label='ADD' 
-              on:click={() =>{ $tasks = 
-                [...$tasks, {id: v4(), task: value , done: false }]
-                
-                value = '' 
-              }}
-                  
-              disabled={ !(value.length > 2)? true : false } 
-            />
-            <Button label='CLEAR' on:click={() => tasks.set([]) } />
-          </div>
-      </div>
+    </div>
+    <div class="min-h-[10vh] py-4 flex px-8 place-items-center opacity-70 font-semibold text-sm">
+      Total: {$todos.length}
     </div>
   </div>
 
-</main>  
+  <div class="main">
+    <div class="min-h-[10vh] border-b shadow-sm bg-white"></div>
+    <div class="px-4">
+      {#if Object.entries(selected).length > 0 }
+        {#if selected.id}
+          <Todo todo={selected} isEdit={true}/>
+        {:else }
+          <Todo todo={selected} isEdit={false} />
+        {/if}
+      {:else }
+        <div>Nothing to show</div>
+      {/if}
+    </div>   
+  </div>
 
-<style>
-p{
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #888
-}
-.parent {
-  position: relative;
-  
-}
-.fg::after {
-  position: absolute;
-  width: 25rem;
-  height: 100%;
-  background-color: #888;
-  border-radius: 1rem;
-  z-index:  -1;
-  content: " ";
-  top: -5rem;
-  left: -6rem;
-  box-shadow: 0 0.4rem .5rem 0.1rem rgba(147, 147, 147, 0.1);
-}
-.fg {
-  position: relative;
-  background-color: white;
-  box-shadow: 0 0.4rem .5rem 0.1rem rgba(147, 147, 147, 0.1);
-  display: flex;
-  flex-direction: column;
-  min-height: 50vh;
-  min-width: 600px; 
-  padding: 2rem 1rem; 
-  border-radius: 0.5rem;
-  /* z-index: 10; */
-}
-</style> -->
+</main>
+
